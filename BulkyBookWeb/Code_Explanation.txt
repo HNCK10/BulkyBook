@@ -1,0 +1,24 @@
+﻿RegisterController.cs
+This code defines a controller named RegisterController, which handles HTTP requests related to user registration.
+
+The controller has a private field _db of type ApplicationDbContext, which is used to interact with the database.
+
+The Index action has two overloads:
+
+The first Index action returns a view named Index, which displays a registration form. This action is executed when the user navigates to the registration page.
+
+The second Index action is marked with the [HttpPost] and [ValidateAntiForgeryToken] attributes, indicating that it is executed when the user submits the registration form. The action takes a Register object as a parameter, which contains the data submitted by the user.
+
+If the data submitted by the user is valid (as determined by the ModelState.IsValid property), the user's registration details are added to the database using _db.Registration.Add(register) and saved using _db.SaveChanges(). The user is then redirected to the OneTimePin view.
+
+If the data submitted by the user is invalid, the view is returned with the invalid data so that the user can correct it.
+
+OneTimePinController.cs
+The code above is the controller for the OneTimePin functionality in the BulkyBookWeb application. The controller handles two actions: Index and Confirm.
+
+The Index action is used to display the OneTimePin view. It takes an email address as a parameter, generates or fetches a One Time Pin (OTP) from the database, and returns the view with the OTP data.
+
+The Confirm action is used to validate the OTP entered by the user. It takes an OTP model as a parameter, checks if the OTP is valid for the provided email address, and redirects the user to the Authenticate view if the OTP is valid. If the OTP is not valid, the action adds a model error to the ModelState object and returns the OneTimePin view with the error message.
+
+The controller depends on the ApplicationDbContext to access the database and the OneTimePin model to define the structure of the OTP data. The code uses the Microsoft.AspNetCore.Mvc namespace to define the controller class and actions.
+
