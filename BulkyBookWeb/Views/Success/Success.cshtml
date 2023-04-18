@@ -1,0 +1,9 @@
+﻿@model BulkyBookWeb.Models.User.Authenticate
+
+<h2>Password Reset Successful</h2>
+
+<p>Your temporary password is: <strong>@Model.TempPassword</strong></p>
+
+<p>Please use this temporary password to login and change your password immediately.</p>
+
+@Html.ActionLink("Back to Login", "Login", "LoginController")
