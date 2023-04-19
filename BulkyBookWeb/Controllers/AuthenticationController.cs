@@ -19,10 +19,10 @@ namespace BulkyBookWeb.Controllers
             return View();
         }
         [HttpPost]
-        public IActionResult Authenticate(string otp)
+        public IActionResult Authenticate(string OneTimePin)
         {
             // Retrieve email from OneTimePin table using otp
-            var oneTimePin = _context.OneTimePin.FirstOrDefault(o => o.OTP == otp);
+            var oneTimePin = _context.OneTimePin.FirstOrDefault(o => o.OTP == OneTimePin);
             if (oneTimePin == null)
             {
                 // Handle invalid OTP

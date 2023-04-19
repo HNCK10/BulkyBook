@@ -25,7 +25,10 @@ namespace BulkyBookWeb.Controllers
                 _context.SaveChanges();
                 return RedirectToAction("OneTimePin", "OneTimePin", new { email = model.Email });
             }
-            return View(model);
+            else
+            {
+                return View(model);
+            }
         }
     }
 }

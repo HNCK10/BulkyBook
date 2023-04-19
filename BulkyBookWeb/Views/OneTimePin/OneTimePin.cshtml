@@ -1,7 +1,7 @@
 ﻿@model BulkyBookWeb.Models.User.OneTimePin
 <h2>One Time Pin</h2>
 <p>Please copy the following One Time Pin:</p>
-<h3>@ViewBag.OneTimePin</h3>
+<h3>@ViewBag.decryptedOtp</h3>
 <form asp-action="OneTimePin" method="post">
     <input type="hidden" name="email" value="@Model?.Email" />
     <div class="form-group">

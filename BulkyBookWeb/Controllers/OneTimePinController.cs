@@ -17,10 +17,9 @@ namespace BulkyBookWeb.Controllers
         [HttpPost]
         public IActionResult OneTimePin(string email)
         {
-            string encryptedOtp = null;
             if (Request.Method == "POST")
             {
-                return RedirectToAction("Authenticate","Authentication", new { email, otp = encryptedOtp });
+                return RedirectToAction("Authenticate","Authentication", new { email, encryptedOtp });
             }
             else
             {
@@ -29,10 +28,10 @@ namespace BulkyBookWeb.Controllers
                 {
                     return NotFound();
                 }
-                var otp = Guid.NewGuid().ToString().Substring(0, 6 );
+                var otp = Guid.NewGuid().ToString().Substring(0, 6);
                 var dataProtectionProvider = DataProtectionProvider.Create("BulkyBookWeb");
                 var protector = dataProtectionProvider.CreateProtector("OneTimePin");
-                encryptedOtp = protector.Protect(otp);
+                var encryptedOtp = protector.Protect(otp);
                 var oneTimePin = new OneTimePin
                 {
                     Email = email,
@@ -40,7 +39,8 @@ namespace BulkyBookWeb.Controllers
                 };
                 _context.OneTimePin.Add(oneTimePin);
                 _context.SaveChanges();
-                ViewBag.OneTimePin = otp;
+                var decryptedOtp = protector.Unprotect(encryptedOtp);
+                ViewBag.DecryptedOtp = decryptedOtp;
                 return View();
             }
         }

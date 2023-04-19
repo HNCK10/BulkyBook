@@ -1,24 +1,255 @@
-﻿RegisterController.cs
-This code defines a controller named RegisterController, which handles HTTP requests related to user registration.
+﻿Order of execution:
+First call to controller+action
+_____________________________________________________________________________________________________
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Register}/{action=Register}/{id?}");
+-----------------------------------------------------------------------------------------------------
+This Line will contact the Register action in the Register controller which will lead to this line.
+______________________________________________________________________________________________________
+        [HttpGet]
+        public IActionResult Register()
+        {
+            return View();
+        }
+------------------------------------------------------------------------------------------------------
+This line will call upon the HTTP protocol and specify a HTTPGET request to return the webpage with the
+User Interface for the user to enter their details.
+User enters Full Name and Email and also has the option to log in if they have already registered
+_______________________________________________________________________________________________________
+@model BulkyBookWeb.Models.User.Register
+-------------------------------------------------------------------------------------------------------
+This line calls upon the model class under the name "Register" inside the "User" table and the form's
+data matches up with it
+________________________________________________________________________________________________________
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using System.ComponentModel.DataAnnotations;
 
-The controller has a private field _db of type ApplicationDbContext, which is used to interact with the database.
+namespace BulkyBookWeb.Models.User
+{
+    public class Register
+    {
+        [Required]
+        [Display(Name = "Full name")]
+        public string FullName { get; set; }
+        [Key]
+        [Required]
+        [EmailAddress]
+        [Display(Name = "Email address")]
+        public string Email { get; set; }
+    }
+}
+----------------------------------------------------------------------------------------------------------
+@using BulkyBookWeb.Controllers;
+<h2>Register</h2>
+<form asp-action="Register" method="post">
+    <div class="form-group">
+        <label asp-for="FullName" class="control-label"></label>
+        <input asp-for="FullName" class="form-control" />
+        <span asp-validation-for="FullName" class="text-danger"></span>
+    </div>
+    <div class="form-group">
+        <label asp-for="Email" class="control-label"></label>
+        <input asp-for="Email" class="form-control" />
+        <span asp-validation-for="Email" class="text-danger"></span>
+    </div>
+    <div class="form-group">
+        <input type="submit" value="Register" class="btn btn-primary" />
+    </div>
+</form>
+<p>Already have an account? <a asp-controller="Login" asp-action="Login">Login here</a>.</p>
+--------------------------------------------------------------------------------------------------
+This form uses the controllers of the program. It displays a Register Heading for the user.
+It contains a form for a user to fill in, and the form contains three spaces.
+Inside each space is a form group, with elements inside each group.
+The first group is for the Full Name of the client, we use the "control-label" class for styling
+We use the "form-control" class for styling and finally we use the asp-validation-for element to
+implement validation code so a user will not enter data in an inaccurate format. We finally use
+the "text-danger" property inside the span for the validation, so any errors that come from valida-
+tion will be styled.
+We have a submit button with a value of "Register" and have a link to the login controller using
+asp-controller and asp-action tags. The link is inside a paragraph element for spacing
+----------------------------------------------------------------------------------------------------
+Once a user has entered their information it is submitted via a HTTP POST request over the HTTP protocol
+and this is the code which receives the data
+---------------------------------------------------------------------------------------------------------
+        [HttpPost]
+        public IActionResult Register(Register model)
+        {
+            if (ModelState.IsValid)
+            {
+                _context.Register.Add(model);
+                _context.SaveChanges();
+                return RedirectToAction("OneTimePin", "OneTimePin", new { email = model.Email });
+            }
+            return View(model);
+        }
+---------------------------------------------------------------------------------------------------------
+This will first verify the ModelState to see if it is valid, the model state needs to match the specified
+structure of the model to be valid.
+The code will then add the model to the Register table if it is valid, and save the changes
+Then we return the email to the OneTimePin action method in the OneTimePin controller.
 
-The Index action has two overloads:
+Since the OneTimePin action method will be running the Get method of the OneTimePin view, the else option
+of the If statement will be executed as follows
+----------------------------------------------------------------------------------------------------------
+        else
+            {
+                var register = _context.Register.Find(email);
+---------------------------------------------------------------------------------------------------------------
+This line will find the email inside of the Register table, and assign all the fields related to that record to the
+register object
+----------------------------------------------------------------------------------------------------------------
+                if (register == null)
+                {
+                    return NotFound();
+                }
+------------------------------------------------------------------------------------------------------------------
+If the register model is null then it will return a NotFound() error
+---------------------------------------------------------------------------------------------------------------------
+                var otp = Guid.NewGuid().ToString().Substring(0, 6 );
+                var dataProtectionProvider = DataProtectionProvider.Create("BulkyBookWeb");
+                var protector = dataProtectionProvider.CreateProtector("OneTimePin");
+                encryptedOtp = protector.Protect(otp);
+------------------------------------------------------------------------------------------------------------------------
+This code generates a unique six-digit one-time password (OTP) using the GUID.NewGuid() method and extracting the first six characters of the generated string using the Substring() method.
 
-The first Index action returns a view named Index, which displays a registration form. This action is executed when the user navigates to the registration page.
+Then it creates a data protection provider object named "dataProtectionProvider" using the "DataProtectionProvider.Create()" method with an application-specific name "BulkyBookWeb".
 
-The second Index action is marked with the [HttpPost] and [ValidateAntiForgeryToken] attributes, indicating that it is executed when the user submits the registration form. The action takes a Register object as a parameter, which contains the data submitted by the user.
+Next, it creates a protector object named "protector" using the "CreateProtector()" method of the data protection provider and a specific purpose for protection called "OneTimePin".
 
-If the data submitted by the user is valid (as determined by the ModelState.IsValid property), the user's registration details are added to the database using _db.Registration.Add(register) and saved using _db.SaveChanges(). The user is then redirected to the OneTimePin view.
+Finally, the six-digit OTP generated earlier is encrypted using the "Protect()" method of the protector object, resulting in a new string called "encryptedOtp" that can be securely transmitted over the network or stored in a database.
+_____________________________________________________________________________________________________________________________
+                var oneTimePin = new OneTimePin
+                {
+                    Email = email,
+                    OTP = encryptedOtp
+                };
+------------------------------------------------------------------------------------------------------------------------------
+A oneTimePin object is created with the email from the database, and the newly generated one time pin.
+--------------------------------------------------------------------------------------------------------------------------------
+                _context.OneTimePin.Add(oneTimePin);
+                _context.SaveChanges();
+                var decryptedOtp = protector.Unprotect(encryptedOtp);
+                ViewBag.DecryptedOtp = decryptedOtp;
+-------------------------------------------------------------------------------------------------------------------------
+The object is saved to the OneTimePin table in the database and the otp is passed to the view by the use of ViewBag.
+---------------------------------------------------------------------------------------------------------------------------
+                return View();
+            }
+----------------------------------------------------------------------------------------------------------------------------
+The return View() line in the OneTimePinController's OneTimePin action method returns the OneTimePin view as a response to the user's request.
 
-If the data submitted by the user is invalid, the view is returned with the invalid data so that the user can correct it.
+The OneTimePin view is a HTML page that is rendered by the Razor view engine and contains the markup to display the OTP to the user. In this action method, the OTP is generated and encrypted, and then stored in the database as part of a new OneTimePin object. The OTP value is also passed to the view by setting the ViewBag.OneTimePin property, so it can be displayed to the user on the page.
 
-OneTimePinController.cs
-The code above is the controller for the OneTimePin functionality in the BulkyBookWeb application. The controller handles two actions: Index and Confirm.
+So, when this action method is called with an HTTP GET request, it generates a new OTP, encrypts it, saves it to the database, and returns the OneTimePin view to the user. The view will then display the OTP value to the user, which they can use to authenticate themselves on the next step.
+------------------------------------------------------------------------------------------------------------------------------
+@model BulkyBookWeb.Models.User.OneTimePin
+<h2>One Time Pin</h2>
+<p>Please copy the following One Time Pin:</p>
+<h3>@ViewBag.OneTimePin</h3>
+<form asp-action="OneTimePin" method="post">
+    <input type="hidden" name="email" value="@Model?.Email" />
+    <div class="form-group">
+        <input type="submit" value="Confirm" class="btn btn-primary" />
+    </div>
+</form>
+---------------------------------------------------------------------------------------------------------------------------
+The model it uses will match the one time pin model, the view uses the ViewBag property to display the OneTimePin and then uses
+the model to retrieve the associated email, The user will then click the submit button to be taken to the next view
+This line of code is used to render an HTML <input> element with a hidden type.
 
-The Index action is used to display the OneTimePin view. It takes an email address as a parameter, generates or fetches a One Time Pin (OTP) from the database, and returns the view with the OTP data.
+The type="hidden" attribute ensures that this input field is not visible on the page, but its value can be submitted to the server along with the form data when the form is submitted.
 
-The Confirm action is used to validate the OTP entered by the user. It takes an OTP model as a parameter, checks if the OTP is valid for the provided email address, and redirects the user to the Authenticate view if the OTP is valid. If the OTP is not valid, the action adds a model error to the ModelState object and returns the OneTimePin view with the error message.
+The name attribute specifies the name of the input field, which is "email" in this case.
 
-The controller depends on the ApplicationDbContext to access the database and the OneTimePin model to define the structure of the OTP data. The code uses the Microsoft.AspNetCore.Mvc namespace to define the controller class and actions.
+The value attribute sets the value of the hidden input field to the email value from the Model object. The @Model?.Email code is a Razor syntax that retrieves the value of the Email property of the Model object, which is a nullable object. The ? operator is used to ensure that the Razor engine will not throw an exception if the Model object is null.
 
+So, when the user submits the form, this hidden input field's value will be sent to the server along with the rest of the form data, allowing the server to identify the email address associated with the form submission.
+-------------------------------------------------------------------------------------------------------------------------------
+                return RedirectToAction("Authenticate","Authentication", new { email, encryptedOtp });
+----------------------------------------------------------------------------------------------------------------------------------
+So, the code block redirects the user to the Authenticate action method with the email and encrypted OTP values, allowing them to verify their identity and complete the authentication process.
+The code will take us to the following
+--------------------------------------------------------------------------------------------------------------------
+[HttpGet]
+        public IActionResult Authenticate()
+        {
+            return View();
+        }
+--------------------------------------------------------------------------------------------------------------------
+This will return the following view
+--------------------------------------------------------------------------------------------------------------------
+<form asp-action = "Authenticate" method="post">
+    <div class="border p-3 mt-4">
+        <div class="row pb-2">
+            <h2 class="text-primary">Authenticate</h2>
+            <hr />
+        </div>
+        <div class="mb-3">
+            <label>Email address</label>
+            <input type="email" name="email" class="form-control" value="@model.Email" readonly />
+        </div>
+        <div class="mb-3">
+            <label>One Time Pin</label>
+            <input type="text" name="otp" class="form-control" />
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:150px">Submit</button>
+    </div>
+</form>
+@section Scripts{
+    @{
+        <partial name="_ValidationScriptsPartial" />
+    }
+}
+--------------------------------------------------------------------------------------------------------------------------
+Once a user enters their one time pin, the code will verify it and display their temporary password
+-------------------------------------------------------------------------------------------------------------------------
+        [HttpPost]
+        public IActionResult Authenticate(string otp)
+        {
+            // Retrieve email from OneTimePin table using otp
+            var oneTimePin = _context.OneTimePin.FirstOrDefault(o => o.OTP == otp);
+            if (oneTimePin == null)
+            {
+                // Handle invalid OTP
+                return RedirectToAction("InvalidOTP");
+            }
+------------------------------------------------------------------------------------------------------------------------------
+The code will get and store the one time pin, from the one time pin table, and then make sure that the user has not entered
+a null value for the one time pin.
+-----------------------------------------------------------------------------------------------------------------------------
+            // Generate Temporary Password
+            string tempPassword = GenerateRandomPassword();
+------------------------------------------------------------------------------------------------------------------------------
+        private string GenerateRandomPassword()
+        {
+            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+            var random = new Random();
+            return new string(Enumerable.Repeat(chars, 10).Select(s => s[random.Next(s.Length)]).ToArray());
+        }
+-----------------------------------------------------------------------------------------------------------------------------
+            string hashedPassword = HashPassword(tempPassword);
+            var authenticate = new Authenticate
+            {
+                Email = oneTimePin.Email,
+                OTP = otp,
+                TempPassword = hashedPassword
+            };
+            _context.Authenticate.Add(authenticate);
+            _context.SaveChanges();
+
+            return RedirectToAction("Success", new { tempPassword });
+        }
+----------------------------------------------------------------------------------------------------------------------------------
+We create the one time pin, then hash it and save it to the database after creating a model with it. We then return the success
+action with the tempPassword variable.
+--------------------------------------------------------------------------------------------------------------------------------
+        public IActionResult Success(string tempPassword)
+        {
+            ViewBag.TempPassword = tempPassword;
+            return View();
+        }
+--------------------------------------------------------------------------------------------------------------------------
+Here is the success action.
+--------------------------------------------------------------------------------------------------------------------------
